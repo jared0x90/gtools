@@ -4,38 +4,72 @@ import hashlib
 import settings
 import math
 
-# placeholder for relevant data
-accounts = None
-holdings = {}
-prices = None
-client = None
-btc_price = None
-eth_price = None
-ltc_price = None
-
 banner = """
-                                88
-                                88
-                                88
-           ,adPPYb,d8   ,adPPYb,88  ,adPPYYba,  8b,     ,d8
-          a8"    `Y88  a8"    `Y88  ""     `Y8   `Y8, ,8P'
-          8b       88  8b       88  ,adPPPPP88     )888(
-          "8a,   ,d88  "8a,   ,d88  88,    ,88   ,d8" "8b,
-           `"YbbdP"Y8   `"8bbdP"Y8  `"8bbdP"Y8  8P'     `Y8
-           aa,    ,88
-            "Y8bbdP"
 
-                                                     88
-                     ,d                              88
-                     88                              88
-                   MM88MMM  ,adPPYba,    ,adPPYba,   88  ,adPPYba,
-                     88    a8"     "8a  a8"     "8a  88  I8[    ""
-                     88    8b       d8  8b       d8  88   `"Y8ba,
-                     88,   "8a,   ,a8"  "8a,   ,a8"  88  aa    ]8I
-                     "Y888  `"YbbdP"'    `"YbbdP"'   88  `"YbbdP"'
+                       8I
+                       8I
+                       8I
+                       8I
+     ,gggg,gg    ,gggg,8I    ,gggg,gg     ,gg,   ,gg
+    dP"  "Y8I   dP"  "Y8I   dP"  "Y8I    d8""8b,dP"
+   i8'    ,8I  i8'    ,8I  i8'    ,8I   dP   ,88"
+  ,d8,   ,d8I ,d8,   ,d8b,,d8,   ,d8b,,dP  ,dP"Y8,
+  P"Y8888P"888P"Y8888P"`Y8P"Y8888P"`Y88"  dP"   "Y88
+         ,d8I'
+       ,dP'8I       I8                              ,dPYb,
+      ,8"  8I       I8                              IP'`Yb
+      I8   8I    88888888                           I8  8I
+      `8, ,8I       I8                              I8  8'
+       `Y8P"        v8      ,ggggg,      ,ggggg,    I8 dP    ,g,
+                    I8     dP"  "Y8ggg  dP"  "Y8ggg I8dP    ,8'8,
+                   ,I8,   i8'    ,8I   i8'    ,8I   I8P    ,8'  Yb
+                  ,d88b, ,d8,   ,d8'  ,d8,   ,d8'  ,d8b,_ ,8'_   8)
+                  88P""Y88P"Y8888P"    P"Y8888P"    8P'"Y88P' "YY8P8P
 
 """
 
+# define our gtools class
+class GToolClass:
+    accounts = None
+    balances = {} # create a dictionary (associative array)
+    prices = {}
+    client = None
+
+    def __init__(self):
+        if settings.use_auth_client:
+            self.client = gdax.AuthenticatedClient(settings.api_key, settings.api_secret, settings.api_key_passphrase)
+        else:
+            self.client = gdax.PublicClient()
+
+    def update_accounts(self):
+        if settings.use_auth_client:
+            self.accounts = self.client.get_accounts()
+            for account in self.accounts:
+                if account['currency'] == 'USD':
+                    self.balances['USD'] = float(account['balance'])
+                if account['currency'] == 'BTC':
+                    self.balances['BTC'] = float(account['balance'])
+                if account['currency'] == 'ETH':
+                    self.balances['ETH'] = float(account['balance'])
+                if account['currency'] == 'LTC':
+                    self.balances['LTC'] = float(account['balance'])
+
+    def update_prices(self):
+        btc_price = self.client.get_product_order_book('BTC-USD', level=1)
+        eth_price = self.client.get_product_order_book('ETH-USD', level=1)
+        ltc_price = self.client.get_product_order_book('LTC-USD', level=1)
+        self.prices.clear()
+        self.prices['BTC'] = {} # create nested dicts
+        self.prices['LTC'] = {}
+        self.prices['ETH'] = {}
+        self.prices['BTC']['ask'] = float(btc_price['asks'][0][0])
+        self.prices['BTC']['bid'] = float(btc_price['bids'][0][0])
+        self.prices['LTC']['ask'] = float(ltc_price['asks'][0][0])
+        self.prices['LTC']['bid'] = float(ltc_price['bids'][0][0])
+        self.prices['ETH']['ask'] = float(eth_price['asks'][0][0])
+        self.prices['ETH']['bid'] = float(eth_price['bids'][0][0])
+
+# helper functions
 
 def show_banner():
     print(banner, "\nTool Version    ", file_hash(sys.argv[0]), "\nSettings Version", file_hash('settings.py'), "\n")
@@ -49,40 +83,78 @@ def file_hash(filename):
             h.update(b)
     return h.hexdigest()
 
-def show_prices():
-    global btc_price, eth_price, ltc_price
-    print("Current BTC Bid: $", '{:10,.2f}'.format(float(btc_price['bids'][0][0])))
-    print("Current BTC Ask: $", '{:10,.2f}'.format(float(btc_price['asks'][0][0])))
+def show_prices(gtool):
+    print("CURRENT PRICES\n-----------------------------")
+    print("Current BTC Bid: $", '{:10,.2f}'.format(gtool.prices['BTC']['bid']))
+    print("Current BTC Ask: $", '{:10,.2f}'.format(gtool.prices['BTC']['ask']))
     print("")
-    print("Current ETH Bid: $", '{:10,.2f}'.format(float(eth_price['bids'][0][0])))
-    print("Current ETH Ask: $", '{:10,.2f}'.format(float(eth_price['asks'][0][0])))
+    print("Current ETH Bid: $", '{:10,.2f}'.format(gtool.prices['ETH']['bid']))
+    print("Current ETH Ask: $", '{:10,.2f}'.format(gtool.prices['ETH']['ask']))
     print("")
-    print("Current LTC Bid: $", '{:10,.2f}'.format(float(ltc_price['bids'][0][0])))
-    print("Current LTC Ask: $", '{:10,.2f}'.format(float(ltc_price['asks'][0][0])))
+    print("Current LTC Bid: $", '{:10,.2f}'.format(gtool.prices['LTC']['bid']))
+    print("Current LTC Ask: $", '{:10,.2f}'.format(gtool.prices['LTC']['ask']))
     print("")
 
-# list of accounts
-def update_accounts():
-    global accounts, client, holdings
-    accounts = client.get_accounts()
-    for account in accounts:
+def show_balances(gtool):
+    total_value = 0
+    print("CURRENT BALANCES\n-----------------------------")
+    for account in gtool.accounts:
         if account['currency'] == 'USD':
-            holdings['USD'] = float(account['balance'])
+            value = float(account['balance'])
+            print ("USD Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print ("USD Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            total_value += value
         if account['currency'] == 'BTC':
-            holdings['BTC'] = float(account['balance'])
+            value = float(account['balance']) * gtool.prices['BTC']['ask']
+            print ("BTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print ("BTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            total_value += value
         if account['currency'] == 'ETH':
-            holdings['ETH'] = float(account['balance'])
+            value = float(account['balance']) * gtool.prices['ETH']['ask']
+            print ("ETH Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print ("ETH Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            total_value += value
         if account['currency'] == 'LTC':
-            holdings['LTC'] = float(account['balance'])
-
-# get current prices
-def update_prices():
-    global btc_price, eth_price, ltc_price, client, prices
-    btc_price = client.get_product_order_book('BTC-USD', level=1)
-    eth_price = client.get_product_order_book('ETH-USD', level=1)
-    ltc_price = client.get_product_order_book('LTC-USD', level=1)
+            value = float(account['balance']) * gtool.prices['LTC']['ask']
+            print ("LTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print ("LTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            total_value += value
+    print (        "TOTAL Value $", '{:20,.8f}'.format(total_value))
 
 def main():
+    show_banner()
+    gtool = GToolClass()
+    if settings.use_auth_client:
+        gtool.update_accounts()
+    gtool.update_prices()
+    show_prices(gtool)
+    if settings.use_auth_client:
+        if "balusd" in sys.argv:
+            show_balances(gtool)
+        if "btc2usdall" in sys.argv:
+            gtool.client.sell(
+                # prince in USD to sell at
+                price=float(gtool.prices['BTC']['ask']),
+                # amount of btc to sell (ALL OF IT)
+                size=gtool.balances['BTC'],
+                # specifcy market is BTC
+                product_id='BTC-USD'
+            )
+        if "eth2usdall" in sys.argv:
+            gtool.client.sell(
+                # prince in USD to sell at
+                price=float(gtool.prices['ETH']['ask']),
+                # amount of btc to sell (ALL OF IT)
+                size=gtool.balances['ETH'],
+                # specifcy market is BTC
+                product_id='ETH-USD'
+            )
+
+def main_old():
     global btc_price, eth_price, ltc_price, client, accounts, prices, holdings
     show_banner()
     # check to see if we use auth client
