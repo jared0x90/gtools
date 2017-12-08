@@ -2,14 +2,16 @@ import gdax
 import sys
 import hashlib
 import settings
+import math
 
-# declare our public client
-client = gdax.PublicClient()
-
-# get current prices
-btc_price = client.get_product_order_book('BTC-USD', level=1)
-eth_price = client.get_product_order_book('ETH-USD', level=1)
-ltc_price = client.get_product_order_book('LTC-USD', level=1)
+# placeholder for relevant data
+accounts = None
+holdings = {}
+prices = None
+client = None
+btc_price = None
+eth_price = None
+ltc_price = None
 
 banner = """
                                 88
@@ -48,6 +50,7 @@ def file_hash(filename):
     return h.hexdigest()
 
 def show_prices():
+    global btc_price, eth_price, ltc_price
     print("Current BTC Bid: $", '{:10,.2f}'.format(float(btc_price['bids'][0][0])))
     print("Current BTC Ask: $", '{:10,.2f}'.format(float(btc_price['asks'][0][0])))
     print("")
@@ -58,17 +61,44 @@ def show_prices():
     print("Current LTC Ask: $", '{:10,.2f}'.format(float(ltc_price['asks'][0][0])))
     print("")
 
+# list of accounts
+def update_accounts():
+    global accounts, client, holdings
+    accounts = client.get_accounts()
+    for account in accounts:
+        if account['currency'] == 'USD':
+            holdings['USD'] = float(account['balance'])
+        if account['currency'] == 'BTC':
+            holdings['BTC'] = float(account['balance'])
+        if account['currency'] == 'ETH':
+            holdings['ETH'] = float(account['balance'])
+        if account['currency'] == 'LTC':
+            holdings['LTC'] = float(account['balance'])
+
+# get current prices
+def update_prices():
+    global btc_price, eth_price, ltc_price, client, prices
+    btc_price = client.get_product_order_book('BTC-USD', level=1)
+    eth_price = client.get_product_order_book('ETH-USD', level=1)
+    ltc_price = client.get_product_order_book('LTC-USD', level=1)
+
 def main():
+    global btc_price, eth_price, ltc_price, client, accounts, prices, holdings
     show_banner()
-    show_prices()
     # check to see if we use auth client
     # if started without arguments
-    if len(sys.argv) > 1:
+    if len(sys.argv) == 1:
+        client = gdax.PublicClient()
+        update_prices()
+        show_prices()
+    else:
         if settings.use_auth_client:
             client = gdax.AuthenticatedClient(settings.api_key, settings.api_secret, settings.api_key_passphrase)
-            if ("balusd" in sys.argv):
-                total_value = 0.0
-                accounts = client.get_accounts()
+            if "balusd" in sys.argv:
+                total_value = 0
+                update_accounts()
+                update_prices()
+                show_prices()
                 for account in accounts:
                     if account['currency'] == 'USD':
                         value = float(account['balance'])
@@ -94,9 +124,75 @@ def main():
                         print ("LTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
                         print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
                         total_value += value
+                print (        "TOTAL Value $", '{:20,.8f}'.format(total_value))
+            if "btc2usdall" in sys.argv:
+                update_accounts()
+                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
+                client.sell(
+                    # prince in USD to sell at
+                    price=float(btc_price['asks'][0][0]),
+                    # amount of btc to sell (ALL OF IT)
+                    size=holdings['BTC'],
+                    # specifcy market is BTC
+                    product_id='BTC-USD'
+                )
+            if "usd2btcall" in sys.argv:
+                update_accounts()
+                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
 
-            print (            "TOTAL Value $", '{:20,.8f}'.format(total_value))
+                money = math.floor(holdings['USD'] * 100.0) / 100.0
+                money *= .995
+                buy_price = float(btc_price['bids'][0][0])
+                buy_size = money/buy_price
+                round_factor = 100000000.0
+                buy_size = math.floor(buy_size * round_factor) / round_factor
+                print("Holdings:" , holdings['USD'])
+                print("Money:", money)
+                print("Buy Size:", buy_size)
+                print("Buy Price:", buy_price)
+                print("Cost:", buy_size * buy_price)
+                print(client.buy(
+                    # USD
+                    price=buy_price,
+                    # BTC
+                    size=buy_size,
+                    # specifcy market is BTC
+                    product_id='BTC-USD'
+                ))
+            if "eth2usdall" in sys.argv:
+                update_accounts()
+                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
+                print(client.sell(
+                    # prince in USD to sell at
+                    price=float(eth_price['asks'][0][0]),
+                    # amount of btc to sell (ALL OF IT)
+                    size=holdings['ETH'],
+                    # specifcy market is BTC
+                    product_id='ETH-USD'
+                ))
+            if "usd2ethall" in sys.argv:
+                update_accounts()
+                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
 
+                money = math.floor(holdings['USD'] * 100.0) / 100.0
+                money *= .995
+                buy_price = float(eth_price['bids'][0][0])
+                buy_size = money/buy_price
+                round_factor = 100000000.0
+                buy_size = math.floor(buy_size * round_factor) / round_factor
+                print("Holdings:" , holdings['USD'])
+                print("Money:", money)
+                print("Buy Size:", buy_size)
+                print("Buy Price:", buy_price)
+                print("Cost:", buy_size * buy_price)
+                print(client.buy(
+                    # USD
+                    price=buy_price,
+                    # ETH
+                    size=buy_size,
+                    # specifcy market is ETH
+                    product_id='ETH-USD'
+                ))
 
 if __name__ == '__main__':
     main()
