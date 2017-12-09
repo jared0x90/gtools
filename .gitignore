@@ -4,3 +4,4 @@ lib/
 pip-selfcheck.json
 *.swp
 __pycache__/
+*.bak
