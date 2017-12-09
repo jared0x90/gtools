@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-""" gtools the gdax python toolbelt """
-# standard library
+""" gtools the even less official gdax python toolbelt """
+# python standard libraries
 import hashlib
 import math
 import os
@@ -272,6 +272,6 @@ def main():
                 product_id='ETH-USD'
             ))
 
-
+# good ol' boilerplate
 if __name__ == '__main__':
     main()
