@@ -1,8 +1,18 @@
-import gdax
-import sys
+#!/usr/bin/env python
+
+""" gtools the gdax python toolbelt """
+# standard library
 import hashlib
-import settings
 import math
+import os
+import sys
+
+# our settings file
+import settings
+
+# "The unofficial Python client for the GDAX API"
+# https://github.com/danpaquin/gdax-python
+import gdax
 
 BANNER = """
 
@@ -37,13 +47,18 @@ class GToolClass:
     client = None
 
     def __init__(self):
-        if settings.use_auth_client:
-            self.client = gdax.AuthenticatedClient(settings.api_key, settings.api_secret, settings.api_key_passphrase)
+        if settings.USE_AUTH_CLIENT:
+            self.client = gdax.AuthenticatedClient(
+                settings.API_KEY,
+                settings.API_SECRET,
+                settings.API_KEY_PASSPHRASE
+            )
         else:
             self.client = gdax.PublicClient()
 
     def update_accounts(self):
-        if settings.use_auth_client:
+        """ retrieve our balances from gdax """
+        if settings.USE_AUTH_CLIENT:
             self.accounts = self.client.get_accounts()
             for account in self.accounts:
                 if account['currency'] == 'USD':
@@ -56,29 +71,32 @@ class GToolClass:
                     self.balances['LTC'] = float(account['balance'])
 
     def update_prices(self):
+        """ fetch recent market prices """
         self.prices.clear()
         self.update_price_ltc()
         self.update_price_eth()
         self.update_price_btc()
 
     def update_price_btc(self):
+        """ fetch the price of btc """
         btc_price = self.client.get_product_order_book('BTC-USD', level=1)
         self.prices['BTC'] = {} # create nested dicts
         self.prices['BTC']['ask'] = float(btc_price['asks'][0][0])
         self.prices['BTC']['bid'] = float(btc_price['bids'][0][0])
 
     def update_price_ltc(self):
+        """ fetch the price of ltc """
         ltc_price = self.client.get_product_order_book('LTC-USD', level=1)
         self.prices['LTC'] = {}
         self.prices['LTC']['ask'] = float(ltc_price['asks'][0][0])
         self.prices['LTC']['bid'] = float(ltc_price['bids'][0][0])
 
     def update_price_eth(self):
+        """ fetch the price of eth """
         eth_price = self.client.get_product_order_book('ETH-USD', level=1)
         self.prices['ETH'] = {}
         self.prices['ETH']['ask'] = float(eth_price['asks'][0][0])
         self.prices['ETH']['bid'] = float(eth_price['bids'][0][0])
-
 
 # helper functions
 def show_banner():
@@ -91,18 +109,17 @@ def show_banner():
         file_hash(os.path.join(os.path.dirname(__file__), 'settings.py')),
         "\n"
     )
-    # todo change settings.py argument to use a path relative to this so it
-    # works when run from other folders.
 
 def file_hash(filename):
     """ calculate the sha256 of a file """
-    h = hashlib.sha256()
-    with open(filename, 'rb', buffering=0) as f:
-        for b in iter(lambda: f.read(128*1024), b''):
-            h.update(b)
-    return h.hexdigest()
+    hasher = hashlib.sha256()
+    with open(filename, 'rb', buffering=0) as file_in:
+        for bytes_in in iter(lambda: file_in.read(128 * 1024), b''):
+            hasher.update(bytes_in)
+    return hasher.hexdigest()
 
 def show_prices(gtool):
+    """ display the most recently observed asks and bids for all currencies """
     print("CURRENT PRICES\n-----------------------------")
     print("Current BTC Bid: $", '{:10,.2f}'.format(gtool.prices['BTC']['bid']))
     print("Current BTC Ask: $", '{:10,.2f}'.format(gtool.prices['BTC']['ask']))
@@ -115,185 +132,146 @@ def show_prices(gtool):
     print("")
 
 def show_balances(gtool):
+    """ function to display our balances and value in USD """
     total_value = 0
     print("CURRENT BALANCES\n-----------------------------")
     for account in gtool.accounts:
         if account['currency'] == 'USD':
             value = float(account['balance'])
-            print ("USD Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-            print ("USD Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            print("USD Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print("USD Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
             total_value += value
         if account['currency'] == 'BTC':
             value = float(account['balance']) * gtool.prices['BTC']['ask']
-            print ("BTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-            print ("BTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            print("BTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print("BTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
             total_value += value
         if account['currency'] == 'ETH':
             value = float(account['balance']) * gtool.prices['ETH']['ask']
-            print ("ETH Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-            print ("ETH Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            print("ETH Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print("ETH Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
             total_value += value
         if account['currency'] == 'LTC':
             value = float(account['balance']) * gtool.prices['LTC']['ask']
-            print ("LTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-            print ("LTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-            print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
+            print("LTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
+            print("LTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
+            print("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
             total_value += value
-    print (        "TOTAL Value $", '{:20,.8f}'.format(total_value))
+    print("TOTAL Value $", '{:20,.8f}'.format(total_value))
+
+def round_usd_down_to_nearest_cent(usd):
+    """ round USD amounts down to the nearest cent """
+    return round_down_to_nearest_decimal(usd, 2)
+
+def round_down_to_nearest_decimal(value_to_round, digits_of_precision):
+    """ round a number down to the specified number of decimal places """
+    return (
+        math.floor(float(value_to_round) * (10.0 ** digits_of_precision))
+        /
+        (10.0 ** digits_of_precision)
+    )
 
 def main():
-    show_banner()
+    """ gtools main function """
+    if not settings.HIDE_BANNER:
+        show_banner()
     gtool = GToolClass()
-    if settings.use_auth_client:
+    if settings.USE_AUTH_CLIENT:
         gtool.update_accounts()
     gtool.update_prices()
     show_prices(gtool)
-    if settings.use_auth_client:
+    if settings.USE_AUTH_CLIENT:
+        # show balances
         if "balusd" in sys.argv:
             show_balances(gtool)
+
+        # convert crypto to usd
         if "btc2usdall" in sys.argv:
-            gtool.client.sell(
+            print(gtool.client.sell(
                 # price in USD to sell at
                 price=float(gtool.prices['BTC']['ask']),
                 # amount of crypto to sell (ALL OF IT)
                 size=gtool.balances['BTC'],
                 # specifcy market is BTC
                 product_id='BTC-USD'
-            )
+            ))
         if "eth2usdall" in sys.argv:
-            gtool.client.sell(
+            print(gtool.client.sell(
                 # price in USD to sell at
                 price=float(gtool.prices['ETH']['ask']),
                 # amount of cyrpto to sell (ALL OF IT)
                 size=gtool.balances['ETH'],
                 # specifcy market is BTC
                 product_id='ETH-USD'
-            )
+            ))
         if "ltc2usdall" in sys.argv:
-            gtool.client.sell(
+            print(gtool.client.sell(
                 # price in USD to sell at
                 price=float(gtool.prices['LTC']['ask']),
                 # amount of crypto to sell (ALL OF IT)
                 size=gtool.balances['LTC'],
                 # specifcy market is BTC
                 product_id='LTC-USD'
+            ))
+
+        # convert usd to crypto
+        if "usd2btcall" in sys.argv:
+            # get usd balance to convert to BTC
+            money = round_usd_down_to_nearest_cent(gtool.balances['USD'])
+            # todo investigate why we cannot place a market order for 100% of USD balance via API
+            money *= settings.CASH_TO_CRYPTO_MULTIPLIER
+
+            # calculate buy size
+            buy_size = round_down_to_nearest_decimal(
+                money / gtool.prices['BTC']['bid'],
+                settings.SATOSHI_FACTOR
             )
 
-def main_old():
-    global btc_price, eth_price, ltc_price, client, accounts, prices, holdings
-    show_banner()
-    # check to see if we use auth client
-    # if started without arguments
-    if len(sys.argv) == 1:
-        client = gdax.PublicClient()
-        update_prices()
-        show_prices()
-    else:
-        if settings.use_auth_client:
-            client = gdax.AuthenticatedClient(settings.api_key, settings.api_secret, settings.api_key_passphrase)
-            if "balusd" in sys.argv:
-                total_value = 0
-                update_accounts()
-                update_prices()
-                show_prices()
-                for account in accounts:
-                    if account['currency'] == 'USD':
-                        value = float(account['balance'])
-                        print ("USD Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-                        print ("USD Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-                        print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
-                        total_value += value
-                    if account['currency'] == 'BTC':
-                        value = float(account['balance']) * float(btc_price['asks'][0][0])
-                        print ("BTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-                        print ("BTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-                        print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
-                        total_value += value
-                    if account['currency'] == 'ETH':
-                        value = float(account['balance']) * float(eth_price['asks'][0][0])
-                        print ("ETH Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-                        print ("ETH Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-                        print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
-                        total_value += value
-                    if account['currency'] == 'LTC':
-                        value = float(account['balance']) * float(ltc_price['asks'][0][0])
-                        print ("LTC Balance: ", '{:20,.8f}'.format(float(account['balance'])))
-                        print ("LTC Avail:   ", '{:20,.8f}'.format(float(account['available'])))
-                        print ("Value:      $", '{:20,.8f}'.format(float(value)), "\n")
-                        total_value += value
-                print (        "TOTAL Value $", '{:20,.8f}'.format(total_value))
-            if "btc2usdall" in sys.argv:
-                update_accounts()
-                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
-                client.sell(
-                    # prince in USD to sell at
-                    price=float(btc_price['asks'][0][0]),
-                    # amount of btc to sell (ALL OF IT)
-                    size=holdings['BTC'],
-                    # specifcy market is BTC
-                    product_id='BTC-USD'
-                )
-            if "usd2btcall" in sys.argv:
-                update_accounts()
-                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
+            # display buy info
+            print("USD Balance:", str(gtool.balances['USD']))
+            print("Money:", money)
+            print("Buy Size:", buy_size)
+            print("Buy Price:", gtool.prices['BTC']['bid'])
+            print("Cost:", buy_size * gtool.prices['BTC']['bid'])
+            print(gtool.client.buy(
+                # USD
+                price=gtool.prices['BTC']['bid'],
+                # BTC
+                size=buy_size,
+                # specifcy market is BTC
+                product_id='BTC-USD'
+            ))
 
-                money = math.floor(holdings['USD'] * 100.0) / 100.0
-                money *= .995
-                buy_price = float(btc_price['bids'][0][0])
-                buy_size = money/buy_price
-                round_factor = 100000000.0
-                buy_size = math.floor(buy_size * round_factor) / round_factor
-                print("Holdings:" , holdings['USD'])
-                print("Money:", money)
-                print("Buy Size:", buy_size)
-                print("Buy Price:", buy_price)
-                print("Cost:", buy_size * buy_price)
-                print(client.buy(
-                    # USD
-                    price=buy_price,
-                    # BTC
-                    size=buy_size,
-                    # specifcy market is BTC
-                    product_id='BTC-USD'
-                ))
-            if "eth2usdall" in sys.argv:
-                update_accounts()
-                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
-                print(client.sell(
-                    # prince in USD to sell at
-                    price=float(eth_price['asks'][0][0]),
-                    # amount of btc to sell (ALL OF IT)
-                    size=holdings['ETH'],
-                    # specifcy market is BTC
-                    product_id='ETH-USD'
-                ))
-            if "usd2ethall" in sys.argv:
-                update_accounts()
-                update_prices()     # update  prices after account balances so prices are most up to date at time of buy
+        if "usd2ethall" in sys.argv:
+            # get usd balance to convert to ETH
+            money = round_usd_down_to_nearest_cent(gtool.balances['USD'])
+            # todo investigate why we cannot place a market order for 100% of USD balance via API
+            money *= settings.CASH_TO_CRYPTO_MULTIPLIER
 
-                money = math.floor(holdings['USD'] * 100.0) / 100.0
-                money *= .995
-                buy_price = float(eth_price['bids'][0][0])
-                buy_size = money/buy_price
-                round_factor = 100000000.0
-                buy_size = math.floor(buy_size * round_factor) / round_factor
-                print("Holdings:" , holdings['USD'])
-                print("Money:", money)
-                print("Buy Size:", buy_size)
-                print("Buy Price:", buy_price)
-                print("Cost:", buy_size * buy_price)
-                print(client.buy(
-                    # USD
-                    price=buy_price,
-                    # ETH
-                    size=buy_size,
-                    # specifcy market is ETH
-                    product_id='ETH-USD'
-                ))
+            # calculate buy size
+            buy_size = round_down_to_nearest_decimal(
+                money / gtool.prices['ETH']['bid'],
+                settings.WEI_FACTOR
+            )
+
+            # display buy info
+            print("USD Balance:", str(gtool.balances['USD']))
+            print("Money:", money)
+            print("Buy Size:", buy_size)
+            print("Buy Price:", gtool.prices['ETH']['bid'])
+            print("Cost:", buy_size * gtool.prices['ETH']['bid'])
+            print(gtool.client.buy(
+                # USD
+                price=gtool.prices['ETH']['bid'],
+                # ETH
+                size=buy_size,
+                # specifcy market is ETH
+                product_id='ETH-USD'
+            ))
+
 
 if __name__ == '__main__':
     main()
-
