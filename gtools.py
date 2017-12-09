@@ -55,19 +55,29 @@ class GToolClass:
                     self.balances['LTC'] = float(account['balance'])
 
     def update_prices(self):
-        btc_price = self.client.get_product_order_book('BTC-USD', level=1)
-        eth_price = self.client.get_product_order_book('ETH-USD', level=1)
-        ltc_price = self.client.get_product_order_book('LTC-USD', level=1)
         self.prices.clear()
+        self.update_price_ltc()
+        self.update_price_eth()
+        self.update_price_btc()
+
+    def update_price_btc(self):
+        btc_price = self.client.get_product_order_book('BTC-USD', level=1)
         self.prices['BTC'] = {} # create nested dicts
-        self.prices['LTC'] = {}
-        self.prices['ETH'] = {}
         self.prices['BTC']['ask'] = float(btc_price['asks'][0][0])
         self.prices['BTC']['bid'] = float(btc_price['bids'][0][0])
+
+    def update_price_ltc(self):
+        ltc_price = self.client.get_product_order_book('LTC-USD', level=1)
+        self.prices['LTC'] = {}
         self.prices['LTC']['ask'] = float(ltc_price['asks'][0][0])
         self.prices['LTC']['bid'] = float(ltc_price['bids'][0][0])
+
+    def update_price_eth(self):
+        eth_price = self.client.get_product_order_book('ETH-USD', level=1)
+        self.prices['ETH'] = {}
         self.prices['ETH']['ask'] = float(eth_price['asks'][0][0])
         self.prices['ETH']['bid'] = float(eth_price['bids'][0][0])
+
 
 # helper functions
 
@@ -137,21 +147,30 @@ def main():
             show_balances(gtool)
         if "btc2usdall" in sys.argv:
             gtool.client.sell(
-                # prince in USD to sell at
+                # price in USD to sell at
                 price=float(gtool.prices['BTC']['ask']),
-                # amount of btc to sell (ALL OF IT)
+                # amount of crypto to sell (ALL OF IT)
                 size=gtool.balances['BTC'],
                 # specifcy market is BTC
                 product_id='BTC-USD'
             )
         if "eth2usdall" in sys.argv:
             gtool.client.sell(
-                # prince in USD to sell at
+                # price in USD to sell at
                 price=float(gtool.prices['ETH']['ask']),
-                # amount of btc to sell (ALL OF IT)
+                # amount of cyrpto to sell (ALL OF IT)
                 size=gtool.balances['ETH'],
                 # specifcy market is BTC
                 product_id='ETH-USD'
+            )
+        if "ltc2usdall" in sys.argv:
+            gtool.client.sell(
+                # price in USD to sell at
+                price=float(gtool.prices['LTC']['ask']),
+                # amount of crypto to sell (ALL OF IT)
+                size=gtool.balances['LTC'],
+                # specifcy market is BTC
+                product_id='LTC-USD'
             )
 
 def main_old():
