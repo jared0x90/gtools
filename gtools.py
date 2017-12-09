@@ -4,7 +4,7 @@ import hashlib
 import settings
 import math
 
-banner = """
+BANNER = """
 
                        8I
                        8I
@@ -25,11 +25,12 @@ banner = """
                    ,I8,   i8'    ,8I   i8'    ,8I   I8P    ,8'  Yb
                   ,d88b, ,d8,   ,d8'  ,d8,   ,d8'  ,d8b,_ ,8'_   8)
                   88P""Y88P"Y8888P"    P"Y8888P"    8P'"Y88P' "YY8P8P
+            (c) 2017 Jared De Blander. MIT Licensed. See LICENSE.txt
 
 """
 
-# define our gtools class
 class GToolClass:
+    """ a class that handles interacting with gdax """
     accounts = None
     balances = {} # create a dictionary (associative array)
     prices = {}
@@ -80,16 +81,24 @@ class GToolClass:
 
 
 # helper functions
-
 def show_banner():
-    print(banner, "\nTool Version    ", file_hash(sys.argv[0]), "\nSettings Version", file_hash('settings.py'), "\n")
-    # todo change settings.py argument to use a path relative to this so it works when run from other
-    # folders.
+    """ print the startup banner """
+    print(
+        BANNER,
+        "\nTool Version    ",
+        file_hash(sys.argv[0]),
+        "\nSettings Version",
+        file_hash(os.path.join(os.path.dirname(__file__), 'settings.py')),
+        "\n"
+    )
+    # todo change settings.py argument to use a path relative to this so it
+    # works when run from other folders.
 
 def file_hash(filename):
+    """ calculate the sha256 of a file """
     h = hashlib.sha256()
     with open(filename, 'rb', buffering=0) as f:
-        for b in iter(lambda : f.read(128*1024), b''):
+        for b in iter(lambda: f.read(128*1024), b''):
             h.update(b)
     return h.hexdigest()
 
