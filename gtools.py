@@ -175,21 +175,76 @@ def round_down_to_nearest_decimal(value_to_round, digits_of_precision):
         (10.0 ** digits_of_precision)
     )
 
-def main():
+def new_main():
     """ gtools main function """
     if not settings.HIDE_BANNER:
         show_banner()
     gtool = GToolClass()
-    if settings.USE_AUTH_CLIENT:
-        gtool.update_accounts()
-    gtool.update_prices()
     if not settings.USE_AUTH_CLIENT:
+        gtool.update_prices()
         show_prices(gtool)
-    parser = argparse.ArgumentParser()
-    parser.parse_args()
+    else:
+
+        # if no arguments dump prices and balances and exit
+        if not len(sys.argv) > 1:
+            gtool.update_accounts()
+            gtool.update_prices()
+            show_prices(gtool)
+            show_balances(gtool)
+            sys.exit(0)
+
+        # Create an argument parser
+        parser = argparse.ArgumentParser(
+            description='Interact with GDAX via the terminal.'
+        )
+
+        # Define arguments
+        parser.add_argument(
+            "-b", "--balances",
+            help="display current balances.",
+            action="store_true"
+        )
+
+        parser.add_argument(
+            "-p", "--prices",
+            help="display current prices.",
+            action="store_true"
+        )
+
+        exchange_group = parser.add_argument_group('exchange')
+        exchange_group.add_argument(
+            "-e", "--exchange",
+            help="currency to source exchange from."
+        )
+
+        exchange_group.add_argument(
+            "-t", "--to",
+            help="currency to trade to."
+        )
+
+        exchange_group.add_argument(
+            "-a", "--amount",
+            help="amount of source currency to use"
+        )
 
 
-def old_main():
+        # Parse the arguments
+        args = parser.parse_args()
+
+        # this is done after the arg parser to not waste time
+        # grabbing data remotely if our args are wrong
+        gtool.update_accounts()
+        gtool.update_prices()
+
+
+        # Test the arguments
+        if args.prices:
+            show_prices(gtool)
+        if args.balances:
+            show_balances(gtool)
+
+
+def main():
     """ gtools main function """
     if not settings.HIDE_BANNER:
         show_banner()
