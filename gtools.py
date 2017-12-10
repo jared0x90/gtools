@@ -6,6 +6,7 @@ import hashlib
 import math
 import os
 import sys
+import argparse
 
 # our settings file
 import settings
@@ -175,6 +176,20 @@ def round_down_to_nearest_decimal(value_to_round, digits_of_precision):
     )
 
 def main():
+    """ gtools main function """
+    if not settings.HIDE_BANNER:
+        show_banner()
+    gtool = GToolClass()
+    if settings.USE_AUTH_CLIENT:
+        gtool.update_accounts()
+    gtool.update_prices()
+    if not settings.USE_AUTH_CLIENT:
+        show_prices(gtool)
+    parser = argparse.ArgumentParser()
+    parser.parse_args()
+
+
+def old_main():
     """ gtools main function """
     if not settings.HIDE_BANNER:
         show_banner()
